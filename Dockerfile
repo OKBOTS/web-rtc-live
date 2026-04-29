@@ -60,6 +60,13 @@ COPY --from=builder /workspace/artifacts/api-server/dist ./api-server/dist
 # Broadcast static site
 COPY --from=builder /workspace/artifacts/broadcast/dist/public ./broadcast/public
 
+# Copy .env files — the entrypoint sources /app/.env at startup so all vars
+# (DATABASE_URL, NODE_ENV, etc.) are available to the API server process.
+# The glob ".env*" also matches .env.example, ensuring this COPY never fails
+# when only the example file is present (e.g. in CI without real secrets).
+# Variables already in the Docker environment always take precedence over .env.
+COPY .env* /app/
+
 COPY docker/nginx.conf   /etc/nginx/sites-available/default
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

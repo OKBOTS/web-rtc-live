@@ -6,7 +6,6 @@
 .local/
 .replit
 replit.nix
-.env
 
 # Dependencies (rebuilt inside Docker)
 node_modules/

@@ -4,16 +4,38 @@ set -e
 # ---------------------------------------------------------------------------
 # entrypoint.sh — starts the API server and nginx inside the container.
 #
-# Environment variables are supplied by Docker at runtime:
-#   docker run --env-file .env -p 3000:3000 <image>
+# Environment variables are loaded from (in priority order):
+#   1. Variables already in the environment (docker run -e / Koyeb dashboard)
+#   2. /app/.env  (the root .env file copied into the image at build time,
+#                  or mounted via -v $(pwd)/.env:/app/.env)
 #
-# The script:
-#   1. Optionally rewrites the nginx listen port from $NGINX_PORT.
-#   2. Starts the API server on internal port 8080.
-#   3. Starts nginx in the foreground (main process).
-#
-# Signals sent to PID 1 are forwarded to both child processes.
+# Variables already present in the environment always win over .env values.
 # ---------------------------------------------------------------------------
+
+# ---- Load .env file -------------------------------------------------------
+# Source /app/.env so DATABASE_URL and other vars are available to child
+# processes.  We use "set -a" so every assignment is automatically exported.
+# Variables already set in the environment take precedence.
+if [ -f /app/.env ]; then
+    echo "[entrypoint] Loading /app/.env..."
+    # Read each line; skip comments and blanks; only set if not already set
+    while IFS= read -r line || [ -n "$line" ]; do
+        # Strip leading/trailing whitespace
+        line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+        # Skip blank lines and comments
+        case "$line" in
+            ''|\#*) continue ;;
+        esac
+        # Extract key and value
+        key="${line%%=*}"
+        value="${line#*=}"
+        # Only export if not already set in the environment
+        eval "current=\${${key}+x}"
+        if [ -z "$current" ]; then
+            export "$key=$value"
+        fi
+    done < /app/.env
+fi
 
 API_PORT=8080
 NGINX_PORT="${NGINX_PORT:-3000}"
