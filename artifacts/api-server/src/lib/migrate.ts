@@ -10,6 +10,8 @@ export async function runMigrations(): Promise<void> {
   logger.info("Running database migrations...");
 
   await pool.query(`
+    SET search_path TO public;
+
     CREATE TABLE IF NOT EXISTS "rooms" (
       "code"            text                     PRIMARY KEY,
       "title"           text                     NOT NULL,
