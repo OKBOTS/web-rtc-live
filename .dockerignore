@@ -1,0 +1,29 @@
+# Version control
+.git
+.gitignore
+
+# Local dev / Replit-specific
+.local/
+.replit
+replit.nix
+.env
+
+# Dependencies (rebuilt inside Docker)
+node_modules/
+**/node_modules/
+
+# Build artefacts (rebuilt inside Docker)
+**/dist/
+**/.turbo/
+
+# Test / coverage
+**/__tests__/
+**/*.test.ts
+**/*.spec.ts
+coverage/
+
+# Misc
+*.log
+.DS_Store
+attached_assets/
+screenshots/
