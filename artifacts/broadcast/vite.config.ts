@@ -3,6 +3,22 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import fs from "fs";
+
+// Load environment variables from .env file in the root directory
+const envPath = path.resolve(import.meta.dirname, "../..", ".env");
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, "utf-8");
+  envContent.split("\n").forEach((line) => {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith("#")) {
+      const [key, ...valueParts] = trimmed.split("=");
+      if (key) {
+        process.env[key] = valueParts.join("=");
+      }
+    }
+  });
+}
 
 const rawPort = process.env.PORT;
 
