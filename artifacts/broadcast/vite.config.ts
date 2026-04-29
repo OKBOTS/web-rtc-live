@@ -5,7 +5,7 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import fs from "fs";
 
-// Load environment variables from .env file in the root directory
+// Load environment variables from .env file in the root directory (only if not already set)
 const envPath = path.resolve(import.meta.dirname, "../..", ".env");
 if (fs.existsSync(envPath)) {
   const envContent = fs.readFileSync(envPath, "utf-8");
@@ -13,7 +13,7 @@ if (fs.existsSync(envPath)) {
     const trimmed = line.trim();
     if (trimmed && !trimmed.startsWith("#")) {
       const [key, ...valueParts] = trimmed.split("=");
-      if (key) {
+      if (key && process.env[key] === undefined) {
         process.env[key] = valueParts.join("=");
       }
     }
