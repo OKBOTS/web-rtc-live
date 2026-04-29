@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "fEjDKNhDyMHKSoVqdB7WM"
+uri = "file://artifacts/broadcast/public/hero.png"
+type = "image"
+title = "Broadcast studio hero"

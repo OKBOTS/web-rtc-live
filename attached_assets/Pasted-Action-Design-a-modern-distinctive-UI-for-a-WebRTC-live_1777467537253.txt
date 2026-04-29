@@ -1,0 +1,19 @@
+Action: Design a modern, distinctive UI for a WebRTC live audio broadcasting webapp.
+**original_problem_statement**: "i need to make an webapp wich work like audio shering with lossless qulity. it work like i open the webapp and type a url like youtube etc.. any url and the webapp open the website inside the website and create a link that open for another divise if i open that like the audio need to play wich streem the audio that i interd in the website audio"
+**user_choices**: User chose Option 2 — WebRTC Audio Broadcast: Host device shares its tab/microphone audio → listeners join via link and hear it live (true streaming via browser screen-share API).
+**key_functionalities**:
+- Landing page with hero CTA "Start a Broadcast" and "Join a Broadcast"
+- Host page: Start/Stop broadcast button, choose source (Tab Audio via screen share / Microphone), live waveform/audio visualizer, listener count, share link with copy button, QR code for the room
+- Listener page: Big play/pause button, live audio visualizer reacting to incoming stream, "X listeners connected" status, host info, connection status indicator
+- Room/session list (recent broadcasts)
+- No login required — just room codes
+- Real-time connection status indicators (connecting, live, disconnected)
+**app_type**: hybrid_fullstack (real-time audio streaming SaaS-style web app)
+The design should feel premium, music/audio-tech focused, with a strong distinctive aesthetic — NOT generic purple gradient. Think along lines of audio engineering tools, professional broadcast software, with strong typography and animated audio visualizers as a centerpiece.
+Observation: ## WebRTC Audio Broadcast UI Guidelines Complete
+- Created complete `design_guidelines.json` at `/app/design_guidelines.json`.
+- Selected Dark Mode "High-Fidelity Broadcast" Theme based on Archetype 4 (Swiss & High-Contrast) + Performance Pro.
+- Defined typography (Outfit, IBM Plex Sans, JetBrains Mono) and deep contrast palette (zinc-950 base with Signal Red and Amber accents).
+- Provided high-quality image URLs for hero backgrounds, host start context, and platform aesthetics.
+- Added instructions for bento-grid "Control Room" layout and data-testid accessibility rules.
+- Next Action Items: Main agent can now read `/app/design_guidelines.json` to configure Tailwind/CSS and implement the UI components.
