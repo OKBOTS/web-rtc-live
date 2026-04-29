@@ -1,6 +1,7 @@
 import http from "http";
 import app from "./app";
 import { logger } from "./lib/logger";
+import { runMigrations } from "./lib/migrate";
 import { attachSignaling } from "./lib/signaling";
 
 const rawPort = process.env["PORT"];
@@ -20,9 +21,16 @@ if (Number.isNaN(port) || port <= 0) {
 const server = http.createServer(app);
 attachSignaling(server);
 
-server.listen(port, () => {
-  logger.info({ port }, "Server listening");
-});
+runMigrations()
+  .then(() => {
+    server.listen(port, () => {
+      logger.info({ port }, "Server listening");
+    });
+  })
+  .catch((err) => {
+    logger.error({ err }, "Failed to run migrations");
+    process.exit(1);
+  });
 
 server.on("error", (err) => {
   logger.error({ err }, "Server error");
