@@ -24,6 +24,9 @@ COPY artifacts/broadcast/package.json   artifacts/broadcast/
 
 RUN pnpm install --frozen-lockfile || pnpm install
 
+# Copy root TypeScript config files — all package tsconfigs extend tsconfig.base.json
+COPY tsconfig.base.json tsconfig.json ./
+
 # Copy full source after install so the layer above is reused on code-only changes
 COPY lib/       lib/
 COPY artifacts/ artifacts/
