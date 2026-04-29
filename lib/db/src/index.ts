@@ -10,13 +10,7 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // Ensure the public schema is always on the search path.
-  // Some hosted PostgreSQL providers (Neon, Supabase, etc.) don't set it
-  // by default, which causes "no schema has been selected" errors.
-  options: "--search_path=public",
-});
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
