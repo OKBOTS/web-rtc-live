@@ -237,7 +237,7 @@ export default function ListenRoom() {
               {room.sourceType === "tab" ? "SYSTEM AUDIO" : "MICROPHONE"}
             </div>
             <div className="bg-background/70 backdrop-blur-md border border-border/50 rounded-md px-3 py-1.5 text-xs font-mono text-muted-foreground">
-              {audioMode === "flac" ? "FLAC 96kHz 24-bit Studio" : "OPUS 48kHz"}
+              {audioMode === "flac" ? "WAV 96kHz 16-bit Stereo" : "OPUS 48kHz"}
             </div>
           </div>
         </div>

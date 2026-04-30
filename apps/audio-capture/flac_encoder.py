@@ -125,11 +125,11 @@ class FlacEncoder:
 
 
 class SimpleFlacEncoder:
-    """Simplified FLAC encoder using numpy for raw audio (no actual FLAC encoding for now)."""
+    """Raw PCM encoder - sends audio as-is for browser to handle."""
 
     def __init__(
         self,
-        sample_rate: int = 48000,
+        sample_rate: int = 96000,
         channels: int = 2,
         bits_per_sample: int = 16,
     ):
@@ -137,6 +137,7 @@ class SimpleFlacEncoder:
         self.channels = channels
         self.bits_per_sample = bits_per_sample
         self._buffer = np.array([], dtype=np.int16)
+        self._buffer_lock = threading.Lock()
 
     def add_audio(self, audio_data: np.ndarray):
         """Add audio data to buffer."""
@@ -146,25 +147,48 @@ class SimpleFlacEncoder:
         if audio_data.ndim == 1:
             audio_data = np.column_stack([audio_data, audio_data])
 
-        self._buffer = np.concatenate([self._buffer, audio_data])
+        with self._buffer_lock:
+            self._buffer = np.concatenate([self._buffer, audio_data])
 
     def get_encoded_chunks(self, min_samples: int = 4800) -> list:
-        """Get chunks of audio data (returns raw PCM for now)."""
+        """Get raw PCM chunks with WAV header."""
         chunks = []
-        while len(self._buffer) >= min_samples:
-            chunk = self._buffer[:min_samples]
-            self._buffer = self._buffer[min_samples:]
-            chunks.append(chunk.tobytes())
+        
+        with self._buffer_lock:
+            while len(self._buffer) >= min_samples:
+                chunk = self._buffer[:min_samples]
+                self._buffer = self._buffer[min_samples:]
+                
+                wav_data = self._create_wav(chunk)
+                chunks.append(wav_data)
+                print(f"[PCM] Created WAV: {len(wav_data)} bytes")
+        
         return chunks
+
+    def _create_wav(self, audio_data: np.ndarray) -> bytes:
+        """Create WAV file bytes."""
+        import wave
+        import io
+        
+        buffer = io.BytesIO()
+        with wave.open(buffer, 'wb') as wav:
+            wav.setnchannels(self.channels)
+            wav.setsampwidth(2)
+            wav.setframerate(self.sample_rate)
+            wav.writeframes(audio_data.tobytes())
+        
+        return buffer.getvalue()
 
     def clear(self):
         """Clear buffer."""
-        self._buffer = np.array([], dtype=np.int16)
+        with self._buffer_lock:
+            self._buffer = np.array([], dtype=np.int16)
 
     @property
     def buffer_size(self) -> int:
         """Get current buffer size in samples."""
-        return len(self._buffer)
+        with self._buffer_lock:
+            return len(self._buffer)
 
 
 def check_flac_available() -> bool:

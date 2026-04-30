@@ -390,36 +390,45 @@ class AirwaveAudioHost:
 
         while self._running:
             chunk = self.audio_capture.get_audio_chunk(timeout=0.1)
-            if chunk is not None and self.flac_encoder:
-                if chunk.ndim == 1:
-                    chunk = np.column_stack([chunk, chunk])
-                self.flac_encoder.add_audio(chunk)
+            if chunk is not None:
+                chunk_shape = chunk.shape
+                print(f"[Capture] Got chunk: {chunk_shape}")
+                
+                if self.flac_encoder:
+                    if chunk.ndim == 1:
+                        chunk = np.column_stack([chunk, chunk])
+                    self.flac_encoder.add_audio(chunk)
+                    print(f"[Capture] Added to encoder, buffer size: {self.flac_encoder.buffer_size}")
 
-                level = AudioProcessor.calculate_rms_level(chunk)
-                if level > 0.01:
-                    print(f"[Audio] Level: {level:.3f}")
-                self.root.after(0, lambda l=level: self._update_level(l))
+                    level = AudioProcessor.calculate_rms_level(chunk)
+                    if level > 0.001:
+                        print(f"[Capture] Level: {level:.3f}")
+                    self.root.after(0, lambda l=level: self._update_level(l))
 
             time.sleep(0.01)
 
     def _encode_loop(self):
         """Encode and send audio in background thread."""
-        last_send_time = time.time()
-
+        send_count = 0
         while self._running:
             time.sleep(0.05)
 
-            if not self.flac_encoder or not self.ws_client:
+            if not self.flac_encoder:
                 continue
 
             chunks = self.flac_encoder.get_encoded_chunks(min_samples=4800)
-            current_time = time.time()
-
-            if current_time - last_send_time >= 0.1 and chunks:
+            
+            if chunks:
                 audio_data = b''.join(chunks[:1])
-                if self.ws_client.is_connected():
-                    self.ws_client.send_audio_data_async(audio_data)
-                last_send_time = current_time
+                data_len = len(audio_data)
+                print(f"[Encode] Got chunk, size: {data_len} bytes")
+                
+                if self.ws_client and self.ws_client.is_connected():
+                    result = self.ws_client.send_audio_data_async(audio_data)
+                    print(f"[Encode] Sent: {result}, size: {data_len}")
+                    send_count += 1
+                else:
+                    print("[Encode] WS not connected")
 
     def _update_level(self, level: float):
         """Update audio level display."""

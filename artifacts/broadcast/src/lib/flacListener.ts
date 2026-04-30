@@ -8,7 +8,6 @@ type FlacListenerCallbacks = {
 export class FlacListener {
   private ws: WebSocket | null = null;
   private audioContext: AudioContext | null = null;
-  private audioDecoder: AudioDecoder | null = null;
   private sourceNode: AudioWorkletNode | null = null;
   private gainNode: GainNode | null = null;
   private callbacks: FlacListenerCallbacks;
@@ -44,6 +43,7 @@ export class FlacListener {
       this.ws.onmessage = async (event) => {
         console.log("[FlacListener] Received message:", typeof event.data);
         if (event.data instanceof ArrayBuffer || event.data instanceof Blob) {
+          console.log("[FlacListener] Audio data received, size:", event.data instanceof Blob ? (event.data as Blob).size : (event.data as ArrayBuffer).byteLength);
           await this.handleAudioData(event.data);
         } else {
           try {
@@ -85,67 +85,39 @@ export class FlacListener {
     this.gainNode.connect(this.audioContext.destination);
 
     try {
-      await this.audioContext.audioWorklet.addModule("/audio-processor.js");
+      await this.audioContext.audioWorklet.addModule("/wav-processor.js");
     } catch (e) {
       console.error("Failed to add audio worklet module", e);
     }
 
     this.sourceNode = new AudioWorkletNode(
       this.audioContext,
-      "flac-processor"
+      "wav-processor"
     );
     this.sourceNode.connect(this.gainNode);
-
-    const supported = await AudioDecoder.isConfigSupported({
-      codec: "flac",
-      sampleRate: 96000,
-      numberOfChannels: 2
-    });
-
-    if (!supported.supported) {
-      throw new Error("FLAC codec not supported");
-    }
-
-    this.audioDecoder = new AudioDecoder({
-      output: (data) => {
-        this.sourceNode?.port.postMessage(data);
-      },
-      error: (error) => {
-        console.error("AudioDecoder error", error);
-      }
-    });
-
-    await this.audioDecoder.configure({
-      codec: "flac",
-      sampleRate: 96000,
-      numberOfChannels: 2
-    });
+    console.log("[FlacListener] AudioWorklet initialized");
   }
 
   private async handleAudioData(data: ArrayBuffer | Blob): Promise<void> {
-    if (!this.audioDecoder) return;
-
-    const buffer = data instanceof Blob ? await data.arrayBuffer() : data;
-    const chunk = new EncodedAudioChunk({
-      type: "key",
-      timestamp: 0,
-      duration: 48000,
-      data: buffer
-    });
+    if (!this.sourceNode) return;
 
     try {
-      await this.audioDecoder.decode(chunk);
+      const buffer = data instanceof Blob ? await data.arrayBuffer() : data;
+      const int16Array = new Int16Array(buffer);
+      const float32Array = new Float32Array(int16Array.length);
+      
+      for (let i = 0; i < int16Array.length; i++) {
+        float32Array[i] = int16Array[i] / 32768.0;
+      }
+      
+      console.log("[FlacListener] Sending PCM to worklet:", float32Array.length, "samples");
+      this.sourceNode.port.postMessage(float32Array);
     } catch (e) {
-      console.error("Failed to decode audio", e);
+      console.error("Failed to process audio", e);
     }
   }
 
   disconnect(): void {
-    if (this.audioDecoder) {
-      this.audioDecoder.close();
-      this.audioDecoder = null;
-    }
-
     if (this.sourceNode) {
       this.sourceNode.disconnect();
       this.sourceNode = null;
