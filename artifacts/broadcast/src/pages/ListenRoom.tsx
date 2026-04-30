@@ -57,7 +57,9 @@ export default function ListenRoom() {
 
   useEffect(() => {
     if (room && !audioMode) {
+      console.log("[ListenRoom] States:", { flacState, webrtcState, roomCode: code });
       if (flacState === "live" || flacState === "connecting") {
+        console.log("[ListenRoom] Setting FLAC mode");
         setAudioMode("flac");
       } else if (webrtcState === "live" || webrtcState === "connecting") {
         setAudioMode("webrtc");

@@ -322,11 +322,13 @@ class AirwaveAudioHost:
             messagebox.showerror("Error", f"Connection error: {str(e)}")
             return
 
+        print("[App] Creating audio capture...")
         self.audio_capture = SystemAudioCapture(
             sample_rate=96000,
             channels=2,
             buffer_size=4096,
         )
+        print("[App] Audio capture created")
 
         self.flac_encoder = SimpleFlacEncoder(
             sample_rate=96000,
@@ -339,8 +341,10 @@ class AirwaveAudioHost:
         self.status.set("LIVE")
         self.start_btn.config(text="STOP BROADCAST")
 
+        print("[App] Starting capture thread...")
         self._capture_thread = threading.Thread(target=self._capture_loop, daemon=True)
         self._capture_thread.start()
+        print("[App] Capture thread started")
 
         self._encode_thread = threading.Thread(target=self._encode_loop, daemon=True)
         self._encode_thread.start()
@@ -392,6 +396,8 @@ class AirwaveAudioHost:
                 self.flac_encoder.add_audio(chunk)
 
                 level = AudioProcessor.calculate_rms_level(chunk)
+                if level > 0.01:
+                    print(f"[Audio] Level: {level:.3f}")
                 self.root.after(0, lambda l=level: self._update_level(l))
 
             time.sleep(0.01)

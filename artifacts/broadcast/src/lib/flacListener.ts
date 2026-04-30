@@ -42,11 +42,13 @@ export class FlacListener {
       };
 
       this.ws.onmessage = async (event) => {
+        console.log("[FlacListener] Received message:", typeof event.data);
         if (event.data instanceof ArrayBuffer || event.data instanceof Blob) {
           await this.handleAudioData(event.data);
         } else {
           try {
             const data = JSON.parse(event.data);
+            console.log("[FlacListener] Parsed:", data);
             if (data.type === "joined" && data.role === "flac-listener") {
               this.isConnected = true;
               await this.initAudio();

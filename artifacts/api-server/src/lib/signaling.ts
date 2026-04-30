@@ -296,6 +296,7 @@ async function attachFlacListener(ws: WebSocket, code: string): Promise<void> {
   }
 
   flacHost.listeners.add(ws);
+  logger.info({ code, listenerCount: flacHost.listeners.size }, "flac listener joined");
   safeSend(ws, { type: "joined", role: "flac-listener" });
 
   const count = flacHost.listeners.size;
