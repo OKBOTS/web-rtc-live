@@ -37,12 +37,20 @@ const apiDist = resolve(ROOT, "artifacts/api-server/dist/index.mjs");
 const webDist = resolve(ROOT, "artifacts/broadcast/dist");
 
 const nodeModules = resolve(ROOT, "node_modules");
+const lockfile = resolve(ROOT, "pnpm-lock.yaml");
 
-// Auto-build if deps or dist are missing, or when explicitly requested
+// Auto-build if deps or dist are missing, or when explicitly requested.
+// Also trigger reinstall if node_modules exists but key native deps are missing (corrupt state).
+function needsReinstall() {
+  if (!existsSync(nodeModules)) return true;
+  const rollupNative = resolve(nodeModules, ".pnpm/@rollup+rollup-linux-arm64-gnu@");
+  return existsSync(lockfile) && !existsSync(rollupNative);
+}
+
 const SHOULD_BUILD =
   process.argv.includes("-b") ||
   process.env.BUILD === "1" ||
-  !existsSync(nodeModules) ||
+  needsReinstall() ||
   !existsSync(apiDist) ||
   !existsSync(webDist);
 
