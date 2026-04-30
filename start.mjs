@@ -40,17 +40,10 @@ const nodeModules = resolve(ROOT, "node_modules");
 const lockfile = resolve(ROOT, "pnpm-lock.yaml");
 
 // Auto-build if deps or dist are missing, or when explicitly requested.
-// Also trigger reinstall if node_modules exists but key native deps are missing (corrupt state).
-function needsReinstall() {
-  if (!existsSync(nodeModules)) return true;
-  const rollupNative = resolve(nodeModules, ".pnpm/@rollup+rollup-linux-arm64-gnu@");
-  return existsSync(lockfile) && !existsSync(rollupNative);
-}
-
 const SHOULD_BUILD =
   process.argv.includes("-b") ||
   process.env.BUILD === "1" ||
-  needsReinstall() ||
+  !existsSync(lockfile) ||
   !existsSync(apiDist) ||
   !existsSync(webDist);
 
@@ -109,6 +102,17 @@ async function main() {
   if (SHOULD_BUILD) {
     console.log(`${DIM}Installing dependencies…${RESET}\n`);
     await runSync("INSTALL", GREEN, "pnpm", ["install"]);
+
+    // Check if the critical native dep is still missing — indicates corrupt
+    // optional dep state that a normal install won't fix. Requires delete+reinstall.
+    if (existsSync(nodeModules)) {
+      const rollupNative = resolve(nodeModules, ".pnpm/@rollup+rollup-");
+      const keyMissing = !existsSync(rollupNative);
+      if (keyMissing) {
+        console.log(`${DIM}Detected corrupt node_modules, reinstalling…${RESET}\n`);
+        await runSync("REINSTALL", RED, "bash", ["-c", "rm -rf node_modules && pnpm install"]);
+      }
+    }
 
     console.log(`\n${DIM}Building packages…${RESET}\n`);
     await runSync("BUILD:api", YELLOW, "pnpm", [
