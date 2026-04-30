@@ -36,6 +36,8 @@ class AirwaveAudioHost:
         self.audio_level = tk.DoubleVar(value=0.0)
         self.is_broadcasting = tk.BooleanVar(value=False)
         self.is_room_created = tk.BooleanVar(value=False)
+        self.audio_device = tk.StringVar(value="")
+        self.available_devices = []
 
         self.audio_capture: Optional[SystemAudioCapture] = None
         self.flac_encoder: Optional[SimpleFlacEncoder] = None
@@ -106,6 +108,18 @@ class AirwaveAudioHost:
         ttk.Label(setup_frame, text="Host Name:").grid(row=2, column=0, sticky=tk.W, pady=5)
         host_entry = ttk.Entry(setup_frame, textvariable=self.host_name, width=35)
         host_entry.grid(row=2, column=1, pady=5, padx=(10, 0))
+
+        ttk.Label(setup_frame, text="Audio Device:").grid(row=4, column=0, sticky=tk.W, pady=5)
+        device_frame = ttk.Frame(setup_frame)
+        device_frame.grid(row=4, column=1, pady=5, padx=(10, 0), sticky=tk.W)
+        
+        self.device_combo = ttk.Combobox(device_frame, textvariable=self.audio_device, width=30, state="readonly")
+        self.device_combo.pack(side=tk.LEFT)
+        
+        refresh_btn = ttk.Button(device_frame, text="↻", command=self._refresh_devices, width=3)
+        refresh_btn.pack(side=tk.LEFT, padx=(5, 0))
+        
+        self._refresh_devices()
 
         self.create_room_btn = ttk.Button(
             setup_frame,
@@ -323,10 +337,18 @@ class AirwaveAudioHost:
             return
 
         print("[App] Creating audio capture...")
+        
+        device_idx = None
+        selected = self.audio_device.get()
+        if selected and ":" in selected:
+            device_idx = int(selected.split(":")[0])
+            print(f"[App] Using device index: {device_idx}")
+        
         self.audio_capture = SystemAudioCapture(
             sample_rate=96000,
             channels=2,
             buffer_size=4096,
+            device_index=device_idx,
         )
         print("[App] Audio capture created")
 
@@ -462,6 +484,25 @@ class AirwaveAudioHost:
     def _on_listener_count_update(self, count: int):
         """Callback when listener count updates."""
         self.root.after(0, lambda: self.listener_count.set(count))
+
+    def _refresh_devices(self):
+        """Refresh available audio devices."""
+        try:
+            from audio_capture import get_available_audio_devices
+            self.available_devices = get_available_audio_devices()
+            
+            device_names = [f"{d['index']}: {d['name']}" for d in self.available_devices]
+            self.device_combo['values'] = device_names
+            
+            if device_names:
+                self.device_combo.current(0)
+                print(f"[App] Found {len(device_names)} audio devices")
+                for d in self.available_devices:
+                    print(f"[App]   - {d['index']}: {d['name']} (ch: {d['channels']})")
+            else:
+                print("[App] No audio input devices found")
+        except Exception as e:
+            print(f"[App] Error refreshing devices: {e}")
 
     def run(self):
         """Run the application."""

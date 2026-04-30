@@ -15,10 +15,12 @@ class SystemAudioCapture:
         sample_rate: int = 96000,
         channels: int = 2,
         buffer_size: int = 4096,
+        device_index: Optional[int] = None,
     ):
         self.sample_rate = sample_rate
         self.channels = channels
         self.buffer_size = buffer_size
+        self.device_index = device_index
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._audio_queue: queue.Queue = queue.Queue(maxsize=100)
@@ -64,11 +66,14 @@ class SystemAudioCapture:
                         inputs = dev.get('max_input_channels', 0)
                         print(f"[AudioCapture]   {i}: {name} (inputs: {inputs})")
 
-            device_index = self._get_loopback_device_index()
+            device_index = self.device_index
+            
+            if device_index is None:
+                device_index = self._get_loopback_device_index()
             
             if device_index is None:
                 device_index = self._sd.query_devices().get('default_input_device')
-                print(f"[AudioCapture] No loopback found, using default: {device_index}")
+                print(f"[AudioCapture] Using default device: {device_index}")
 
             if device_index is None:
                 print("[AudioCapture] No audio input device available")
@@ -220,15 +225,28 @@ def get_available_audio_devices():
 
     try:
         import sounddevice as sd
-        for i, dev in enumerate(sd.query_devices()):
-            if dev['max_input_channels'] > 0:
+        device_list = sd.query_devices()
+        
+        if isinstance(device_list, dict):
+            if device_list.get('max_input_channels', 0) > 0:
                 devices.append({
-                    'index': i,
-                    'name': dev['name'],
-                    'channels': dev['max_input_channels'],
-                    'sample_rate': dev['default_samplerate'],
+                    'index': device_list.get('default_input_device', 0),
+                    'name': device_list.get('default_input_device_name', 'Default Input'),
+                    'channels': device_list.get('max_input_channels', 0),
+                    'sample_rate': device_list.get('default_samplerate', 44100),
                 })
-    except ImportError:
-        pass
+        else:
+            for i, dev in enumerate(device_list):
+                if isinstance(dev, dict) and dev.get('max_input_channels', 0) > 0:
+                    devices.append({
+                        'index': i,
+                        'name': dev.get('name', f'Device {i}'),
+                        'channels': dev.get('max_input_channels', 0),
+                        'sample_rate': dev.get('default_samplerate', 44100),
+                    })
+    except ImportError as e:
+        print(f"Error querying devices: {e}")
+    except Exception as e:
+        print(f"Error: {e}")
 
     return devices
