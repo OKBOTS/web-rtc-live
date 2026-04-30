@@ -41,15 +41,17 @@ export class FlacListener {
       };
 
       this.ws.onmessage = async (event) => {
-        console.log("[FlacListener] Received message:", typeof event.data);
+        console.log("[FlacListener] Received message:", typeof event.data, event.data);
         if (event.data instanceof ArrayBuffer || event.data instanceof Blob) {
           console.log("[FlacListener] Audio data received, size:", event.data instanceof Blob ? (event.data as Blob).size : (event.data as ArrayBuffer).byteLength);
           await this.handleAudioData(event.data);
         } else {
           try {
             const data = JSON.parse(event.data);
-            console.log("[FlacListener] Parsed:", data);
+            console.log("[FlacListener] Parsed JSON:", data);
+            console.log("[FlacListener] Checking condition:", data.type, data.role);
             if (data.type === "joined" && data.role === "flac-listener") {
+              console.log("[FlacListener] MATCH! Setting connected...");
               this.isConnected = true;
               await this.initAudio();
               this.callbacks.onConnected();
