@@ -6,12 +6,13 @@
  * with colour-coded, prefixed output for each service.
  *
  * REQUIREMENTS: both packages must be built before running.
- * Pass -b (or set BUILD=1) to build them automatically first.
+ * Builds automatically if dist files are missing.
+ * Force a rebuild with -b or BUILD=1.
  *
  * Usage:
- *   node start.mjs       # both services must already be built
- *   node start.mjs -b    # build then start
- *   BUILD=1 node start.mjs       # same via env var
+ *   node start.mjs          # auto-builds if needed, then starts
+ *   node start.mjs -b       # always rebuild, then start
+ *   BUILD=1 node start.mjs  # same via env var
  *
  * Environment variables:
  *   API_PORT   Port for the API server           (default: 8080)
@@ -32,8 +33,15 @@ const API_PORT  = process.env.API_PORT  ?? "8080";
 const WEB_PORT  = process.env.PORT      ?? "3000";
 const BASE_PATH = process.env.BASE_PATH ?? "/";
 
+const apiDist = resolve(ROOT, "artifacts/api-server/dist/index.mjs");
+const webDist = resolve(ROOT, "artifacts/broadcast/dist");
+
+// Auto-build if dist is missing, or when explicitly requested
 const SHOULD_BUILD =
-  process.argv.includes("-b") || process.env.BUILD === "1";
+  process.argv.includes("-b") ||
+  process.env.BUILD === "1" ||
+  !existsSync(apiDist) ||
+  !existsSync(webDist);
 
 // ANSI colour codes
 const RESET  = "\x1b[0m";
@@ -96,17 +104,6 @@ async function main() {
       "--filter", "@workspace/broadcast", "run", "build",
     ]);
     console.log(`\n${GREEN}✓ Build complete${RESET}\n`);
-  } else {
-    // Sanity check — warn if dist is missing
-    const apiDist = resolve(ROOT, "artifacts/api-server/dist/index.mjs");
-    const webDist = resolve(ROOT, "artifacts/broadcast/dist");
-    if (!existsSync(apiDist) || !existsSync(webDist)) {
-      console.error(
-        `${RED}[ERROR]${RESET} Built files not found. Run with ${YELLOW}-b${RESET} first:\n` +
-        `  node start.mjs -b\n`
-      );
-      process.exit(1);
-    }
   }
 
   // ── Spawn services ───────────────────────────────────────────────────────
