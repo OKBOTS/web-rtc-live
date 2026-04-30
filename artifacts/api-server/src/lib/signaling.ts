@@ -10,20 +10,31 @@ interface HostState {
   listeners: Map<string, WebSocket>;
 }
 
+interface FlacHostState {
+  ws: WebSocket;
+  listeners: Set<WebSocket>;
+}
+
 const hosts: Map<string, HostState> = new Map();
+const flacHosts: Map<string, FlacHostState> = new Map();
 
 export function getLiveStats(): { liveNow: number; listenersConnected: number } {
   let listeners = 0;
   for (const h of hosts.values()) {
     listeners += h.listeners.size;
   }
-  return { liveNow: hosts.size, listenersConnected: listeners };
+  for (const h of flacHosts.values()) {
+    listeners += h.listeners.size;
+  }
+  return { liveNow: hosts.size + flacHosts.size, listenersConnected: listeners };
 }
 
 export function getRoomLiveInfo(code: string): { isLive: boolean; listenerCount: number } {
   const h = hosts.get(code);
-  if (!h) return { isLive: false, listenerCount: 0 };
-  return { isLive: true, listenerCount: h.listeners.size };
+  if (h) return { isLive: true, listenerCount: h.listeners.size };
+  const fh = flacHosts.get(code);
+  if (fh) return { isLive: true, listenerCount: fh.listeners.size };
+  return { isLive: false, listenerCount: 0 };
 }
 
 export function hashToken(token: string): string {
@@ -77,6 +88,15 @@ interface IncomingHostMessage {
 interface IncomingListenerMessage {
   type: "to-host";
   payload: unknown;
+}
+interface IncomingFlacHostConnect {
+  type: "flac-host-connect";
+  code: string;
+  hostToken?: string;
+}
+interface IncomingFlacListenerConnect {
+  type: "flac-listener";
+  code: string;
 }
 
 type IncomingHello = IncomingHostHello | IncomingListenerHello;
@@ -194,6 +214,94 @@ async function attachListener(ws: WebSocket, code: string): Promise<void> {
   });
 }
 
+async function attachFlacHost(ws: WebSocket, code: string, hostToken: string): Promise<void> {
+  const [room] = await db.select().from(roomsTable).where(eq(roomsTable.code, code));
+  if (!room) {
+    safeSend(ws, { type: "error", error: "room not found" });
+    ws.close();
+    return;
+  }
+  if (room.endedAt) {
+    safeSend(ws, { type: "error", error: "room already ended" });
+    ws.close();
+    return;
+  }
+  if (hostToken && room.hostTokenHash !== hashToken(hostToken)) {
+    safeSend(ws, { type: "error", error: "invalid host token" });
+    ws.close();
+    return;
+  }
+
+  const existing = flacHosts.get(code);
+  if (existing) {
+    safeSend(existing.ws, { type: "error", error: "flac-host-replaced" });
+    try {
+      existing.ws.close();
+    } catch {}
+    for (const lws of existing.listeners) {
+      safeSend(lws, { type: "flac-host-ended" });
+    }
+  }
+
+  const state: FlacHostState = { ws, listeners: new Set() };
+  flacHosts.set(code, state);
+  safeSend(ws, { type: "joined", role: "flac-host" });
+  logger.info({ code }, "flac host attached");
+
+  ws.on("message", (raw: RawData) => {
+    if (Buffer.isBuffer(raw) && raw.length > 100) {
+      const flacHost = flacHosts.get(code);
+      if (!flacHost) return;
+      for (const lws of flacHost.listeners) {
+        if (lws.readyState === WebSocket.OPEN) {
+          try {
+            lws.send(raw, { binary: true });
+          } catch {}
+        }
+      }
+    }
+  });
+
+  ws.on("close", async () => {
+    const h = flacHosts.get(code);
+    if (h !== state) return;
+    flacHosts.delete(code);
+    for (const lws of state.listeners) {
+      safeSend(lws, { type: "flac-host-ended" });
+    }
+    await endRoomInDb(code);
+    logger.info({ code }, "flac host detached");
+  });
+}
+
+async function attachFlacListener(ws: WebSocket, code: string): Promise<void> {
+  const flacHost = flacHosts.get(code);
+  if (!flacHost) {
+    const [room] = await db.select().from(roomsTable).where(eq(roomsTable.code, code));
+    if (!room) {
+      safeSend(ws, { type: "error", error: "room not found" });
+    } else {
+      safeSend(ws, { type: "error", error: "flac-host offline" });
+    }
+    ws.close();
+    return;
+  }
+
+  flacHost.listeners.add(ws);
+  safeSend(ws, { type: "joined", role: "flac-listener" });
+
+  const count = flacHost.listeners.size;
+  safeSend(flacHost.ws, { type: "flac-listener-count", count });
+
+  ws.on("close", () => {
+    const h = flacHosts.get(code);
+    if (!h) return;
+    h.listeners.delete(ws);
+    const listenerCount = h.listeners.size;
+    safeSend(h.ws, { type: "flac-listener-count", count: listenerCount });
+  });
+}
+
 export function attachSignaling(server: Server): void {
   const wss = new WebSocketServer({ noServer: true });
 
@@ -220,23 +328,31 @@ export function attachSignaling(server: Server): void {
 
     ws.once("message", (raw: RawData) => {
       clearTimeout(helloTimeout);
-      let hello: IncomingHello | undefined;
+
+      let helloJson: unknown;
       try {
-        hello = JSON.parse(raw.toString()) as IncomingHello;
+        helloJson = JSON.parse(raw.toString());
       } catch {
         safeSend(ws, { type: "error", error: "invalid hello" });
         ws.close();
         return;
       }
+
+      const hello = helloJson as { type: string; code?: string; hostToken?: string };
       if (!hello || typeof hello.code !== "string") {
         safeSend(ws, { type: "error", error: "invalid hello" });
         ws.close();
         return;
       }
+
       if (hello.type === "host") {
-        void attachHost(ws, hello.code, hello.hostToken);
+        void attachHost(ws, hello.code, hello.hostToken ?? "");
       } else if (hello.type === "listener") {
         void attachListener(ws, hello.code);
+      } else if (hello.type === "flac-host-connect") {
+        void attachFlacHost(ws, hello.code, hello.hostToken ?? "");
+      } else if (hello.type === "flac-listener") {
+        void attachFlacListener(ws, hello.code);
       } else {
         safeSend(ws, { type: "error", error: "unknown role" });
         ws.close();

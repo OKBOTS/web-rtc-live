@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useGetRoom } from "@workspace/api-client-react";
 import { useWebRTCListener } from "@/hooks/useWebRTCListener";
+import { useFlacListener } from "@/hooks/useFlacListener";
 import { AudioVisualizer } from "@/components/AudioVisualizer";
 import { ConnectionStatus } from "@/components/ConnectionStatus";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,8 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+type AudioMode = "flac" | "webrtc";
+
 export default function ListenRoom() {
   const { code } = useParams<{ code: string }>();
   const [, setLocation] = useLocation();
@@ -27,6 +30,7 @@ export default function ListenRoom() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
+  const [audioMode, setAudioMode] = useState<AudioMode | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
   const { data: room, isLoading: isLoadingRoom } = useGetRoom(code || "", {
@@ -35,10 +39,56 @@ export default function ListenRoom() {
 
   const {
     stream,
-    connectionState,
+    connectionState: webrtcState,
     listenerCount,
-    error: signalingError,
+    error: webrtcError,
   } = useWebRTCListener(code || "");
+
+  const {
+    connectionState: flacState,
+    error: flacError,
+    play: flacPlay,
+    pause: flacPause,
+    setVolume: flacSetVolume,
+  } = useFlacListener(code || "");
+
+  const connectionState = audioMode === "flac" ? flacState : webrtcState;
+  const signalingError = audioMode === "flac" ? flacError : webrtcError;
+
+  useEffect(() => {
+    if (room && !audioMode) {
+      if (flacState === "live" || flacState === "connecting") {
+        setAudioMode("flac");
+      } else if (webrtcState === "live" || webrtcState === "connecting") {
+        setAudioMode("webrtc");
+      }
+    }
+  }, [flacState, webrtcState, room, audioMode]);
+
+  useEffect(() => {
+    if (audioMode === "flac") {
+      if (flacState === "live" && isPlaying) {
+        flacPlay();
+      }
+    }
+  }, [isPlaying, audioMode, flacState]);
+
+  useEffect(() => {
+    if (audioMode === "flac") {
+      flacSetVolume(isMuted ? 0 : volume);
+    } else if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume;
+    }
+  }, [volume, isMuted, audioMode]);
+
+  useEffect(() => {
+    if (audioMode === "webrtc" && stream && audioRef.current) {
+      audioRef.current.srcObject = stream;
+      if (isPlaying) {
+        audioRef.current.play().catch(() => setIsPlaying(false));
+      }
+    }
+  }, [stream, isPlaying, audioMode]);
 
   useEffect(() => {
     if (stream && audioRef.current) {
@@ -56,15 +106,24 @@ export default function ListenRoom() {
   }, [volume, isMuted]);
 
   const togglePlay = () => {
-    if (!audioRef.current || !stream) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      audioRef.current
-        .play()
-        .then(() => setIsPlaying(true))
-        .catch(() => {});
+    if (audioMode === "flac") {
+      if (isPlaying) {
+        flacPause();
+        setIsPlaying(false);
+      } else {
+        flacPlay();
+        setIsPlaying(true);
+      }
+    } else if (audioMode === "webrtc" && audioRef.current && stream) {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        audioRef.current
+          .play()
+          .then(() => setIsPlaying(true))
+          .catch(() => {});
+      }
     }
   };
 
@@ -176,7 +235,7 @@ export default function ListenRoom() {
               {room.sourceType === "tab" ? "SYSTEM AUDIO" : "MICROPHONE"}
             </div>
             <div className="bg-background/70 backdrop-blur-md border border-border/50 rounded-md px-3 py-1.5 text-xs font-mono text-muted-foreground">
-              OPUS 48kHz
+              {audioMode === "flac" ? "FLAC 96kHz 24-bit Studio" : "OPUS 48kHz"}
             </div>
           </div>
         </div>
