@@ -46,20 +46,21 @@ function serializeRoom(row: typeof roomsTable.$inferSelect) {
 }
 
 router.get("/rooms", async (_req, res): Promise<void> => {
+  // Only return rooms that have not been ended
   const rows = await db
     .select()
     .from(roomsTable)
+    .where(isNull(roomsTable.endedAt))
     .orderBy(desc(roomsTable.createdAt))
-    .limit(60);
+    .limit(30);
 
   const data = rows.map(serializeRoom);
-  // live first
+  // live rooms first
   data.sort((a, b) => {
     if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
     return a.createdAt < b.createdAt ? 1 : -1;
   });
-  const sliced = data.slice(0, 30);
-  res.json(ListRoomsResponse.parse(sliced));
+  res.json(ListRoomsResponse.parse(data));
 });
 
 router.post("/rooms", async (req, res): Promise<void> => {
@@ -151,18 +152,10 @@ router.post("/rooms/:code/end", async (req, res): Promise<void> => {
     return;
   }
 
-  const [updated] = await db
-    .update(roomsTable)
-    .set({ endedAt: new Date() })
-    .where(eq(roomsTable.code, params.data.code))
-    .returning();
+  // Delete the room so it immediately disappears from all listings
+  await db.delete(roomsTable).where(eq(roomsTable.code, params.data.code));
 
-  if (!updated) {
-    res.status(404).json({ error: "room not found" });
-    return;
-  }
-
-  res.json(EndRoomResponse.parse(serializeRoom(updated)));
+  res.json(EndRoomResponse.parse(serializeRoom(row)));
 });
 
 export { router as roomsRouter, generateRoomCode };

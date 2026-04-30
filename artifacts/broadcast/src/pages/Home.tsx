@@ -132,8 +132,12 @@ export default function Home() {
                   <Card className="group hover:border-primary/50 transition-colors cursor-pointer bg-card/50 hover:bg-card overflow-hidden">
                     <CardHeader className="pb-4">
                       <div className="flex justify-between items-start mb-2">
-                        <div className={`px-2 py-1 rounded text-xs font-bold font-mono ${room.isLive ? 'bg-destructive/20 text-destructive' : 'bg-muted text-muted-foreground'}`}>
-                          {room.isLive ? 'LIVE' : 'ENDED'}
+                        <div className="px-2 py-1 rounded text-xs font-bold font-mono bg-destructive/20 text-destructive flex items-center gap-1.5">
+                          <span className="relative flex h-1.5 w-1.5">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75" />
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-destructive" />
+                          </span>
+                          LIVE
                         </div>
                         <div className="flex items-center text-xs text-muted-foreground font-mono">
                           <Users className="mr-1 h-3 w-3" />
