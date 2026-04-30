@@ -6,11 +6,11 @@
  * with colour-coded, prefixed output for each service.
  *
  * REQUIREMENTS: both packages must be built before running.
- * Pass --build (or set BUILD=1) to build them automatically first.
+ * Pass -b (or set BUILD=1) to build them automatically first.
  *
  * Usage:
- *   node start.mjs               # both services must already be built
- *   node start.mjs --build       # build then start
+ *   node start.mjs       # both services must already be built
+ *   node start.mjs -b    # build then start
  *   BUILD=1 node start.mjs       # same via env var
  *
  * Environment variables:
@@ -33,7 +33,7 @@ const WEB_PORT  = process.env.PORT      ?? "3000";
 const BASE_PATH = process.env.BASE_PATH ?? "/";
 
 const SHOULD_BUILD =
-  process.argv.includes("--build") || process.env.BUILD === "1";
+  process.argv.includes("-b") || process.env.BUILD === "1";
 
 // ANSI colour codes
 const RESET  = "\x1b[0m";
@@ -102,8 +102,8 @@ async function main() {
     const webDist = resolve(ROOT, "artifacts/broadcast/dist");
     if (!existsSync(apiDist) || !existsSync(webDist)) {
       console.error(
-        `${RED}[ERROR]${RESET} Built files not found. Run with ${YELLOW}--build${RESET} first:\n` +
-        `  node start.mjs --build\n`
+        `${RED}[ERROR]${RESET} Built files not found. Run with ${YELLOW}-b${RESET} first:\n` +
+        `  node start.mjs -b\n`
       );
       process.exit(1);
     }
