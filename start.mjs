@@ -100,7 +100,7 @@ async function main() {
   // ── Optional build step ──────────────────────────────────────────────────
   if (SHOULD_BUILD) {
     console.log(`${DIM}Installing dependencies…${RESET}\n`);
-    await runSync("INSTALL", GREEN, "pnpm", ["install", "--frozen-lockfile"]);
+    await runSync("INSTALL", GREEN, "pnpm", ["install"]);
 
     console.log(`\n${DIM}Building packages…${RESET}\n`);
     await runSync("BUILD:api", YELLOW, "pnpm", [
