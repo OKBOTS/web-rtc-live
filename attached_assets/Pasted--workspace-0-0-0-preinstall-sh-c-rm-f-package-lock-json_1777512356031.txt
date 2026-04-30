@@ -1,0 +1,38 @@
+
+> workspace@0.0.0 preinstall
+> sh -c 'rm -f package-lock.json yarn.lock; command -v pnpm >/dev/null || { echo "Use pnpm instead" >&2; exit 1; }'
+
+up to date, audited 3 packages in 483ms
+
+1 package is looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+(node:47) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+▶ Airwave combined launcher (optional runner — primary dev workflow unchanged)
+Building packages…
+[BUILD:api] > pnpm --filter @workspace/api-server run build
+[BUILD:api] ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-10.26.1.tgz
+[BUILD:api] > @workspace/api-server@0.0.0 build /home/container/artifacts/api-server
+[BUILD:api] > node ./build.mjs
+[BUILD:api] node:internal/modules/package_json_reader:267
+[BUILD:api]   throw new ERR_MODULE_NOT_FOUND(packageName, fileURLToPath(base), null);
+[BUILD:api]         ^
+[BUILD:api] Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'esbuild' imported from /home/container/artifacts/api-server/build.mjs
+[BUILD:api]     at Object.getPackageJSONURL (node:internal/modules/package_json_reader:267:9)
+[BUILD:api]     at packageResolve (node:internal/modules/esm/resolve:768:81)
+[BUILD:api]     at moduleResolve (node:internal/modules/esm/resolve:854:18)
+[BUILD:api]     at defaultResolve (node:internal/modules/esm/resolve:984:11)
+[BUILD:api]     at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:780:12)
+[BUILD:api]     at #cachedDefaultResolve (node:internal/modules/esm/loader:704:25)
+[BUILD:api]     at ModuleLoader.resolve (node:internal/modules/esm/loader:687:38)
+[BUILD:api]     at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:305:38)
+[BUILD:api]     at ModuleJob._link (node:internal/modules/esm/module_job:137:49) {
+[BUILD:api]   code: 'ERR_MODULE_NOT_FOUND'
+[BUILD:api] }
+[BUILD:api] Node.js v23.11.1
+[BUILD:api] /home/container/artifacts/api-server:
+[BUILD:api]  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/api-server@0.0.0 build: `node ./build.mjs`
+[BUILD:api] Exit status 1
+[BUILD:api]  WARN   Local package.json exists, but node_modules missing, did you mean to install?

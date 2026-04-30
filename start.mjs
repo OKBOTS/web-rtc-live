@@ -36,10 +36,13 @@ const BASE_PATH = process.env.BASE_PATH ?? "/";
 const apiDist = resolve(ROOT, "artifacts/api-server/dist/index.mjs");
 const webDist = resolve(ROOT, "artifacts/broadcast/dist");
 
-// Auto-build if dist is missing, or when explicitly requested
+const nodeModules = resolve(ROOT, "node_modules");
+
+// Auto-build if deps or dist are missing, or when explicitly requested
 const SHOULD_BUILD =
   process.argv.includes("-b") ||
   process.env.BUILD === "1" ||
+  !existsSync(nodeModules) ||
   !existsSync(apiDist) ||
   !existsSync(webDist);
 
@@ -96,7 +99,10 @@ async function main() {
 
   // ── Optional build step ──────────────────────────────────────────────────
   if (SHOULD_BUILD) {
-    console.log(`${DIM}Building packages…${RESET}\n`);
+    console.log(`${DIM}Installing dependencies…${RESET}\n`);
+    await runSync("INSTALL", GREEN, "pnpm", ["install", "--frozen-lockfile"]);
+
+    console.log(`\n${DIM}Building packages…${RESET}\n`);
     await runSync("BUILD:api", YELLOW, "pnpm", [
       "--filter", "@workspace/api-server", "run", "build",
     ]);
