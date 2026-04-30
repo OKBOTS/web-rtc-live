@@ -1,0 +1,72 @@
+npm error Cannot read properties of null (reading 'isDescendantOf')
+npm error A complete log of this run can be found in: /home/container/.npm/_logs/2026-04-30T01_29_56_778Z-debug-0.log
+(node:44) [DEP0180] DeprecationWarning: fs.Stats constructor is deprecated.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+▶ Airwave combined launcher (optional runner — primary dev workflow unchanged)
+Installing dependencies…
+[INSTALL] > pnpm install
+[INSTALL] Scope: all 9 workspace projects
+[INSTALL] Lockfile is up to date, resolution step is skipped
+[INSTALL] Progress: resolved 1, reused 0, downloaded 0, added 0
+[INSTALL] Packages: +4
+[INSTALL] ++++
+[INSTALL] Progress: resolved 4, reused 0, downloaded 4, added 4, done
+[INSTALL] . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; command -v pnpm >/dev/null || { echo "Use pnpm instead" >&2; exit 1; }'
+[INSTALL] . preinstall: Done
+[INSTALL] Done in 1.9s using pnpm v10.26.1
+Building packages…
+[BUILD:api] > pnpm --filter @workspace/api-server run build
+[BUILD:api] > @workspace/api-server@0.0.0 build /home/container/artifacts/api-server
+[BUILD:api] > node ./build.mjs
+[BUILD:api]   dist/index.mjs                       1.9mb ⚠️
+[BUILD:api]   dist/pino-worker.mjs               153.4kb
+[BUILD:api]   dist/pino-file.mjs                 142.0kb
+[BUILD:api]   dist/pino-pretty.mjs               114.6kb
+[BUILD:api]   dist/thread-stream-worker.mjs        7.3kb
+[BUILD:api]   dist/index.mjs.map                   3.2mb
+[BUILD:api]   dist/pino-worker.mjs.map           256.9kb
+[BUILD:api]   dist/pino-file.mjs.map             229.0kb
+[BUILD:api]   dist/pino-pretty.mjs.map           203.9kb
+[BUILD:api]   dist/thread-stream-worker.mjs.map   12.0kb
+[BUILD:api] ⚡ Done in 235ms
+[BUILD:web] > pnpm --filter @workspace/broadcast run build
+[BUILD:web] > @workspace/broadcast@0.0.0 build /home/container/artifacts/broadcast
+[BUILD:web] > vite build --config vite.config.ts
+[BUILD:web] /home/container/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js:115
+[BUILD:web]             throw new Error(
+[BUILD:web]                   ^
+[BUILD:web] Error: Cannot find module @rollup/rollup-linux-arm64-gnu. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+[BUILD:web]     at requireWithFriendlyError (/home/container/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js:115:9)
+[BUILD:web]     at Object.<anonymous> (/home/container/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js:124:76)
+[BUILD:web]     at Module._compile (node:internal/modules/cjs/loader:1734:14)
+[BUILD:web]     at Object..js (node:internal/modules/cjs/loader:1899:10)
+[BUILD:web]     at Module.load (node:internal/modules/cjs/loader:1469:32)
+[BUILD:web]     at Function._load (node:internal/modules/cjs/loader:1286:12)
+[BUILD:web]     at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+[BUILD:web]     at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+[BUILD:web]     at cjsLoader (node:internal/modules/esm/translators:315:5)
+[BUILD:web]     at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:207:7) {
+[BUILD:web]   [cause]: Error: Cannot find module '@rollup/rollup-linux-arm64-gnu'
+[BUILD:web]   Require stack:
+[BUILD:web]   - /home/container/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js
+[BUILD:web]       at Function._resolveFilename (node:internal/modules/cjs/loader:1405:15)
+[BUILD:web]       at defaultResolveImpl (node:internal/modules/cjs/loader:1061:19)
+[BUILD:web]       at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1066:22)
+[BUILD:web]       at Function._load (node:internal/modules/cjs/loader:1215:37)
+[BUILD:web]       at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+[BUILD:web]       at wrapModuleLoad (node:internal/modules/cjs/loader:235:24)
+[BUILD:web]       at Module.require (node:internal/modules/cjs/loader:1491:12)
+[BUILD:web]       at require (node:internal/modules/helpers:135:16)
+[BUILD:web]       at requireWithFriendlyError (/home/container/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js:97:10)
+[BUILD:web]       at Object.<anonymous> (/home/container/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js:124:76) {
+[BUILD:web]     code: 'MODULE_NOT_FOUND',
+[BUILD:web]     requireStack: [
+[BUILD:web]       '/home/container/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js'
+[BUILD:web]     ]
+[BUILD:web]   }
+[BUILD:web] }
+[BUILD:web] Node.js v23.11.1
+[BUILD:web] /home/container/artifacts/broadcast:
+[BUILD:web]  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/broadcast@0.0.0 build: `vite build --config vite.config.ts`
+[BUILD:web] Exit status 1
+[ERROR] BUILD:web build failed (exit 1)
