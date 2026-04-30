@@ -168,7 +168,9 @@ async function attachHost(ws: WebSocket, code: string, hostToken: string): Promi
 
 async function attachListener(ws: WebSocket, code: string): Promise<void> {
   const host = hosts.get(code);
-  if (!host) {
+  const flacHost = flacHosts.get(code);
+
+  if (!host && !flacHost) {
     const [room] = await db.select().from(roomsTable).where(eq(roomsTable.code, code));
     if (!room) {
       safeSend(ws, { type: "error", error: "room not found" });
@@ -179,39 +181,45 @@ async function attachListener(ws: WebSocket, code: string): Promise<void> {
     return;
   }
 
-  const listenerId = randomUUID();
-  host.listeners.set(listenerId, ws);
-  safeSend(ws, { type: "joined", role: "listener", listenerId });
-  safeSend(host.ws, { type: "listener-joined", listenerId });
-  broadcastListenerCount(code);
+  if (flacHost) {
+    attachFlacListener(ws, code);
+    return;
+  }
 
-  // Track peak listeners
-  const currentPeak = host.listeners.size;
-  void db
-    .update(roomsTable)
-    .set({ peakListeners: currentPeak })
-    .where(eq(roomsTable.code, code))
-    .catch(() => undefined);
-
-  ws.on("message", (raw: RawData) => {
-    let msg: IncomingListenerMessage | undefined;
-    try {
-      msg = JSON.parse(raw.toString()) as IncomingListenerMessage;
-    } catch {
-      return;
-    }
-    if (msg.type !== "to-host") return;
-    safeSend(host.ws, { type: "from-listener", listenerId, payload: msg.payload });
-  });
-
-  ws.on("close", () => {
-    const h = hosts.get(code);
-    if (!h) return;
-    if (h.listeners.get(listenerId) !== ws) return;
-    h.listeners.delete(listenerId);
-    safeSend(h.ws, { type: "listener-left", listenerId });
+  if (host) {
+    const listenerId = randomUUID();
+    host.listeners.set(listenerId, ws);
+    safeSend(ws, { type: "joined", role: "listener", listenerId });
+    safeSend(host.ws, { type: "listener-joined", listenerId });
     broadcastListenerCount(code);
-  });
+
+    const currentPeak = host.listeners.size;
+    void db
+      .update(roomsTable)
+      .set({ peakListeners: currentPeak })
+      .where(eq(roomsTable.code, code))
+      .catch(() => undefined);
+
+    ws.on("message", (raw: RawData) => {
+      let msg: IncomingListenerMessage | undefined;
+      try {
+        msg = JSON.parse(raw.toString()) as IncomingListenerMessage;
+      } catch {
+        return;
+      }
+      if (msg.type !== "to-host") return;
+      safeSend(host.ws, { type: "from-listener", listenerId, payload: msg.payload });
+    });
+
+    ws.on("close", () => {
+      const h = hosts.get(code);
+      if (!h) return;
+      if (h.listeners.get(listenerId) !== ws) return;
+      h.listeners.delete(listenerId);
+      safeSend(h.ws, { type: "listener-left", listenerId });
+      broadcastListenerCount(code);
+    });
+  }
 }
 
 async function attachFlacHost(ws: WebSocket, code: string, hostToken: string): Promise<void> {
