@@ -339,6 +339,7 @@ export function attachSignaling(server: Server): void {
       }
 
       const hello = helloJson as { type: string; code?: string; hostToken?: string };
+      logger.info({ hello }, "received hello message");
       if (!hello || typeof hello.code !== "string") {
         safeSend(ws, { type: "error", error: "invalid hello" });
         ws.close();

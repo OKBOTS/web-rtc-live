@@ -12,9 +12,10 @@ logger = logging.getLogger(__name__)
 class FLACWebSocketClient:
     """WebSocket client for FLAC audio streaming."""
 
-    def __init__(self, server_url: str, room_code: str):
+    def __init__(self, server_url: str, room_code: str, host_token: str = ""):
         self.server_url = server_url
         self.room_code = room_code
+        self.host_token = host_token
         self._websocket = None
         self._connected = False
         self._running = False
@@ -75,6 +76,7 @@ class FLACWebSocketClient:
                 connect_msg = {
                     "type": "flac-host-connect",
                     "code": self.room_code,
+                    "hostToken": self.host_token,
                 }
                 await ws.send(json.dumps(connect_msg))
 

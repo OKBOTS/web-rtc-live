@@ -229,12 +229,12 @@ class AirwaveAudioHost:
                 else:
                     messagebox.showerror("Error", "Invalid response from server")
             else:
-                error_msg = f"Server error: {response.status_code}"
+                error_msg = f"Server error: {response.status_code}\n"
                 try:
                     error_data = response.json()
-                    error_msg = error_data.get("message", error_msg)
+                    error_msg += error_data.get("message", error_data.get("error", "Unknown"))
                 except:
-                    pass
+                    error_msg += response.text[:200] if response.text else "No details"
                 messagebox.showerror("Error", error_msg)
 
         except requests.exceptions.ConnectionError:
@@ -308,7 +308,7 @@ class AirwaveAudioHost:
         ws_url = server_url.replace("http", "ws") + "/ws"
 
         try:
-            self.ws_client = FLACWebSocketClient(ws_url, room_code)
+            self.ws_client = FLACWebSocketClient(ws_url, room_code, host_token)
             self.ws_client.set_connected_callback(self._on_ws_connected)
             self.ws_client.set_disconnected_callback(self._on_ws_disconnected)
             self.ws_client.set_error_callback(self._on_ws_error)
